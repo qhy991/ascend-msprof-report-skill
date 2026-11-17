@@ -1,0 +1,2 @@
+Op Name,Op Type,Task Duration(us),Block Dim,Mix Block Dim,Device Id,Pid,Current Freq,Rated Freq,
+exp_kernel_f32,vector,347.306946,48,NA,0,164,1800,1800,
