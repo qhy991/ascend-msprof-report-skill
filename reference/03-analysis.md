@@ -3,7 +3,17 @@
 `PipeUtilization.csv` has one row per block and per sub-block. On a vector-only kernel the `aic_*`
 half is `NA` and the `aiv_*` half carries everything.
 
-## Column set (verified)
+## Two rules before the column list
+
+**Read columns by name.** 9.1.0 and 8.5.0 emit the same metrics in a different order, and 8.5.0
+adds `aic_scalar_*` earlier in the row. Position-based parsing silently reads the wrong pipe.
+
+**Group rows by `sub_block_id` before averaging.** A kernel the release calls `mix` produces one row
+per block per sub-block (`cube0`, `vector0`, `vector1`). Sub-blocks that got no work sit near
+0.001 us, and a max/min ratio computed across them is noise, not a finding. `max/median` inside a
+sub-block group is the version that survives.
+
+## Column set (verified on CANN 9.1.0, vector path)
 
 Left side, per block:
 
@@ -61,8 +71,12 @@ says whether an individual core was starved.
 ## Reading the distribution, not the average
 
 Rows differ. Two blocks in the same kernel can be 20% apart, and the kernel duration follows the
-slowest. `helpers/analyze_pipe_csv.py` prints min, median, max, and the spread for each ratio so a
-bimodal kernel is visible immediately.
+slowest. `helpers/analyze_pipe_csv.py` prints min, median, max, and `max/median` for every metric,
+per sub-block group, so a bimodal kernel is visible immediately.
+
+`max/median` is the spread to quote. `max/min` is not: on a mix-mode kernel the low tail includes
+sub-blocks that were never scheduled work, so the ratio reaches four or five digits without saying
+anything about the machine.
 
 A spread much larger than the work imbalance (compare tiles per block from the tiling parameters)
 means the blocks are not seeing equal memory service. That is a real finding, and it is invisible in

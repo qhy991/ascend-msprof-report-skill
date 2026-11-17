@@ -57,6 +57,25 @@ run is not supported; choose the group that answers the question, and run again 
 Mix Block Dim, Device Id, Pid, Current Freq, Rated Freq`. A `Task Duration` that disagrees wildly
 with your own timing means you profiled a different launch, not that the profiler is wrong.
 
+### The same kernel does not produce the same table on both releases
+
+Measured on the identical binary, same shape, same block count:
+
+| | CANN 9.1.0 (container) | CANN 8.5.0 (host) |
+|---|---|---|
+| `Op Type` | `vector` | `mix` |
+| `Mix Block Dim` | `NA` | `96` |
+| rows in `PipeUtilization.csv` | 48 | 144 |
+| `sub_block_id` values | `vector0` | `cube0`, `vector0`, `vector1` |
+| column order | `aic_scalar_*` after `aic_fixpipe_*` | `aic_scalar_*` before `aic_mte1_*` |
+
+So `Op Type` is assigned by the release, not by the kernel's nature: this is a vector-only kernel
+that 8.5.0 still splits into cube and vector sub-blocks. Never branch on `Op Type`, and never index
+columns by position. Read columns by name and group rows by `sub_block_id`.
+
+Rows equal `Block Dim` times the number of sub-blocks, so a 48-block mix kernel has 144 rows.
+Counting rows and calling it the block count overstates the parallelism by 3x.
+
 ## The trace mode, for context
 
 `msprof [flags] <app>` writes a `PROF_*` tree instead. Useful flags:

@@ -56,8 +56,8 @@ of the time. The refuting check for case A fails to fire in one direction only: 
 close to a plausible HBM roof for one die, so there may be no scheduling headroom left. That roof has
 not been measured on this machine, so it stays a hypothesis.
 
-**Secondary: uneven blocks (case F).** `aiv_time` spans 284.5 to 346.7 us, a 1.22x spread, and the
-kernel's duration is set by the slowest block. The work is *not* imbalanced: `aiv_vec_time` is
+**Secondary: uneven blocks (case F).** `aiv_time` spans 284.5 to 346.7 us, `max/median` 1.10
+(`max/min` 1.22), and the kernel's duration is set by the slowest block. The work is *not* imbalanced: `aiv_vec_time` is
 53.547 to 53.554 us on every block, and every block does 28 or 29 tiles of 12208 elements. So the
 22% spread lives entirely in memory service, and `aiv_mte2_time` carries it (282 to 344 us).
 
@@ -78,6 +78,27 @@ available to `exp`. That is the number to test next, not the vector math.
    cost instead.
 3. **Do not shrink the arithmetic.** The fp32 path already measures 0.17 vector utilization. Cutting
    vector instructions cannot move a kernel whose vector pipe idles 83% of the time.
+
+## Replication on the other toolchain (CANN 8.5.0, bare host)
+
+The same sources, built on the host with the toolkit's bundled GCC 7.3 headers and profiled with the
+host `msprof`, give `Task Duration` 351.7 us, which is inside the run-to-run band of the container
+number (347.3 and 350.2 us across two container runs).
+
+The table shape is not the same. `Op Type` reads `mix`, `Mix Block Dim` reads `96`, and the CSV has
+144 rows: 48 blocks times three sub-blocks.
+
+- `cube0` rows: `aic_cube_time` 0.000 us everywhere, `aic_scalar_time` about 13.5 us. A vector-only
+  kernel still emits a cube sub-block, and it does nothing but scalar setup.
+- `vector0` and `vector1` rows: the vector work is split between them, medians near 141 us each.
+- Sub-blocks that were never scheduled sit at 0.001 to 0.255 us, which is why the report quotes
+  `max/median` and not `max/min`.
+
+Both toolchains reach the same conclusion: MTE2 occupied all but a fraction of a percent of the
+time, vector underneath 20%, and the block-to-block spread carried by memory service.
+
+Getting there needed two host-only fixes, both now inside `helpers/build_standalone.sh`: C++
+headers from the toolkit, and `chmod 755` on the application directory, which `msopprof` requires.
 
 ## What was not collected
 

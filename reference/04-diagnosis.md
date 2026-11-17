@@ -66,6 +66,14 @@ report this as a cause from the counters alone; the CSV shows the symptom, not t
 gaps, host dispatch, and synchronization. A short kernel repeated many times is a launch problem, not
 an AI Core problem.
 
+## State of evidence
+
+Cases A and F were exercised on hardware: the example run in `examples/exp-f32-8192/` is an
+MTE2-bound kernel with uneven blocks, measured on both CANN 9.1.0 and CANN 8.5.0. Cases B, C, D, E
+and G are read off the documented meaning of the columns and have not been confirmed against a
+kernel that actually exhibits them. Treat their counter patterns as hypotheses to check, and say so
+in the report.
+
 ## Rules
 
 1. One primary bottleneck per report. Others are ranked follow-ups.

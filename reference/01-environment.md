@@ -60,6 +60,29 @@ library failed`, which reads like a driver fault and is really a path fault.
 So a profiling harness for a submission must not go through torch in this image. Build a standalone
 ACL binary. If you need torch for model-level work, use an image built with `OPS_MODE=refonly`.
 
+## Building on the bare host (CANN 8.5.0)
+
+The container is the easy path, but the host works too once two gaps are filled. Verified on the
+910C node as a non-root user:
+
+- **No C++ standard headers.** openEuler 22.03 there has `gcc` 10.3.1 and no `/usr/include/c++`. The
+  toolkit ships its own under `$CANN/tools/hcc/aarch64-target-linux-gnu/include/c++/7.3.0`. Export
+  them as `CPLUS_INCLUDE_PATH`, not as `-I`, because the compiler's own generated translation units
+  need them too and do not inherit flags.
+- **No `libstdc++.so` for the linker.** The same tree has `lib64/libstdc++.so`, so add
+  `-L$CANN/tools/hcc/aarch64-target-linux-gnu/lib64` and put it on `LD_LIBRARY_PATH` to run.
+
+`helpers/build_standalone.sh` does both automatically when `/usr/include/c++` is missing.
+
+**`msopprof` refuses a group- or world-writable directory**:
+
+```
+[ERROR] /home/<user>/work/ is writable by any other users or group users.
+```
+
+That is a privilege-escalation guard on `--application`. `chmod 755` the directory and the binary
+before collecting. It fires on the host; the container copies run as root and do not hit it.
+
 ## Building a standalone kernel binary
 
 The kernel translation unit must be compiled by Bisheng with `-xasc`, and the host `main` compiled

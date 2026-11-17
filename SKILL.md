@@ -33,7 +33,8 @@ same measurement. Record the command, the CSV, and the launch parameters togethe
 ## Environment facts (verified, do not re-derive)
 
 - **Binary:** `/usr/local/Ascend/cann-<ver>/tools/profiler/bin/msprof`, and on `PATH` inside the
-  official eval image. `msprof --version` is **not** a valid flag; use `msprof op -v`.
+  official eval image. Version reporting is release-dependent: 9.1.0 accepts `msprof op -v`
+  (reports msopprof 26.1.0), 8.5.0 rejects both `--version` and `op -v` with `unexpected argument`.
 - **Two profilers, one CLI.** `msprof <app>` is the full trace (timeline, runtime API, task
   scheduling). `msprof op <args>` is `msopprof`, the kernel-level profiler with replay and hardware
   counters, and it is the one that answers "why is this kernel slow".

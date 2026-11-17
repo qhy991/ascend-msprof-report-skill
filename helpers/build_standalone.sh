@@ -25,6 +25,19 @@ INC="-I$KERNEL_DIR -I$CANN/include -I$CANN/compiler/tikcpp/include \
 -I$CANN/compiler/ascendc/include/highlevel_api/tiling \
 -I$CANN/compiler/ascendc/impl/aicore/basic_api"
 
+LIB_EXTRA=""
+# A bare openEuler host has gcc but no C++ standard headers. The toolkit carries its own; they go in
+# CPLUS_INCLUDE_PATH because the compiler's generated units inherit no -I flags.
+if [[ ! -d /usr/include/c++ ]]; then
+    HCC="$CANN/tools/hcc/aarch64-target-linux-gnu"
+    if [[ -d "$HCC/include/c++" ]]; then
+        VERSIONED=$(ls -d "$HCC"/include/c++/*/ | head -1)
+        export CPLUS_INCLUDE_PATH="${VERSIONED}:${VERSIONED}aarch64-target-linux-gnu:${CPLUS_INCLUDE_PATH:-}"
+        LIB_EXTRA="-L$HCC/lib64"
+        echo "== no system C++ headers, using $VERSIONED" >&2
+    fi
+fi
+
 OBJ_DIR=$(mktemp -d)
 trap 'rm -rf "$OBJ_DIR"' EXIT
 
@@ -34,6 +47,15 @@ echo "== host"
 $BISHENG -O3 -std=gnu++17 $INC -c "$BENCH_SRC" -o "$OBJ_DIR/bench.o"
 echo "== link"
 $BISHENG -O3 -std=gnu++17 -o "$OUT" "$OBJ_DIR/bench.o" "$OBJ_DIR/kernel.o" \
-    -L"$CANN/lib64" -lascendcl -lplatform -lregister -ltiling_api -lruntime
+    $LIB_EXTRA -L"$CANN/lib64" -lascendcl -lplatform -lregister -ltiling_api -lruntime
+
+chmod 755 "$OUT"
+
+# msopprof refuses to run an application from a group- or world-writable directory.
+OUT_DIR=$(cd "$(dirname "$OUT")" && pwd)
+if [[ -n "$(find "$OUT_DIR" -maxdepth 0 -perm /022 2>/dev/null)" ]]; then
+    echo "WARNING: $OUT_DIR is group- or world-writable; msopprof will refuse it." >&2
+    echo "         chmod 755 $OUT_DIR" >&2
+fi
 
 ls -l "$OUT"
