@@ -99,11 +99,16 @@ one kernel's internals. Do not infer per-pipe occupancy from a trace.
 
 ## What invalidates a run
 
-- **A profiled process that crashed or exited non-zero.** `msopprof` still prints
-  `Op profiling finish` and leaves an `OPPROF_*` directory with no CSVs. Check for the CSV before
-  reading anything into the report.
-- **A launch you did not intend.** `--launch-count=1` with no `--kernel-name` takes the first
-  matching launch. If the harness runs several shapes, name the kernel or skip launches.
+- **An `OPPROF_*` directory with no CSVs.** `msopprof` still prints `Op profiling finish` and exits
+  zero, so this is invisible unless you look. Two causes: the profiled process crashed, exited
+  non-zero or launched no kernel, **and host contention** — on a loaded shared box the collection
+  fails this way every time. Check the load first; see `06-shared-host.md`. Never retry in a loop:
+  the retries are what wedge a die.
+- **A launch you did not intend.** `--launch-count=1` takes the first matching launch. If the
+  harness runs several shapes, give it a harness that launches only the kernel you want. Do **not**
+  reach for `--kernel-name` to do this: the filter is applied to an unmangled name while the dump
+  carries the mangled symbol (`_Z14gcd_kernel_i32PhS_S_lllllllllll`), so it matches nothing and the
+  collection comes back empty (card-09 NOTES.md:6717).
 - **A different launch geometry than the claim.** 48 blocks and 96 blocks are different kernels for
   this purpose. Record `Block Dim` from `OpBasicInfo.csv`.
 - **Mixed dtypes or attributes across launches.** An `exp` with `base=2` and an `exp` with natural

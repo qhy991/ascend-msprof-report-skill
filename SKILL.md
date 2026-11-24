@@ -51,6 +51,11 @@ same measurement. Record the command, the CSV, and the launch parameters togethe
 - **Evaluating a submission and profiling it are different containers.** The harness container owns
   the score. Do not use profiling artifacts to claim a score, and do not re-run the harness to get
   counters.
+- **A collection can fail silently, and retrying it is what breaks the machine.** `msopprof` exits
+  zero and leaves an `OPPROF_*` directory with no `PipeUtilization.csv` whenever the host is loaded.
+  A retry loop around that leaves profiler processes holding GB of HBM until the die stops answering,
+  and `pkill -f "msprof op"` does not reap them. Run `helpers/npu_preflight.sh` before collecting and
+  read `reference/06-shared-host.md` before touching a shared node.
 
 ---
 
@@ -66,12 +71,16 @@ same measurement. Record the command, the CSV, and the launch parameters togethe
    matches what the evaluator builds.
 2. **Check it runs and print the launch parameters** before profiling. Block count, block length,
    tile size, and dtype all belong in the report.
-3. **Collect** with `helpers/run_msprof_op.sh` or by hand:
+3. **Check the box can be profiled**: `helpers/npu_preflight.sh`. On a shared multi-card node this
+   is not optional, because the failure it prevents is silent and expensive (`06-shared-host.md`).
+4. **Collect** with `helpers/run_msprof_op.sh`, which runs the preflight and owner-locks the output
+   directory for you, or by hand:
    `msprof op --application=./bench --output=./prof --aic-metrics=PipeUtilization --launch-count=1 --warm-up=3`.
-   See `reference/02-collection.md` for the metric groups and the replay flags.
-4. **Parse** with `helpers/analyze_pipe_csv.py`; never read 48 rows by eye.
-5. **Diagnose** against `reference/04-diagnosis.md`. Name one primary bottleneck.
-6. **Write** `profile/<run_name>/REPORT.md` from `reference/05-report-template.md`.
+   See `reference/02-collection.md` for the metric groups and the replay flags. If the run produces
+   no `PipeUtilization.csv`, do not retry it in a loop — read `06-shared-host.md`.
+5. **Parse** with `helpers/analyze_pipe_csv.py`; never read 48 rows by eye.
+6. **Diagnose** against `reference/04-diagnosis.md`. Name one primary bottleneck.
+7. **Write** `profile/<run_name>/REPORT.md` from `reference/05-report-template.md`.
 
 ## Pages
 
@@ -80,7 +89,10 @@ same measurement. Record the command, the CSV, and the launch parameters togethe
 - `reference/03-analysis.md` — the PipeUtilization column set, what each ratio means, aggregate math
 - `reference/04-diagnosis.md` — playbook: MTE2-bound, MTE3-bound, vector-bound, scalar-wait, uneven blocks
 - `reference/05-report-template.md` — the report shape and its rules
-- `helpers/build_standalone.sh`, `helpers/run_msprof_op.sh`, `helpers/analyze_pipe_csv.py`
+- `reference/06-shared-host.md` — loaded multi-card nodes: the silent empty collection, the wedged
+  die it causes, how to recognise one and how to clear it without touching another card's work
+- `helpers/build_standalone.sh`, `helpers/run_msprof_op.sh`, `helpers/npu_preflight.sh`,
+  `helpers/analyze_pipe_csv.py`
 - `examples/exp-f32-8192/` — one complete verified run: kernel source, harness, CSVs, and the reading
 
 ## What this skill does not do

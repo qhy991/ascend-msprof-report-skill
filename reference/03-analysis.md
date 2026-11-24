@@ -52,6 +52,12 @@ aiv_scalar_wait_ib_time(us), aiv_scalar_wait_time(us)
 - **`*_active_bw`** is bandwidth *during the pipe's active intervals*, not averaged over the block.
   Never sum it across blocks to get device bandwidth, it double counts overlapped intervals. Compute
   aggregate bandwidth from bytes and `Task Duration`.
+
+  The arithmetic makes the trap concrete: a kernel reading `aiv_mte2_active_bw` of ~85 GB/s per core
+  across 48 cores implies ~4 TB/s on one die, which is above any plausible HBM figure for this part.
+  So a low `aiv_mte2_ratio` is **pipe-issue occupancy, and is not evidence that the memory system has
+  spare capacity**. "MTE2 is only 4%, so memory is free" does not follow, and a design change argued
+  on that basis is argued on nothing (card-09 NOTES.md:6708).
 - **`aiv_scalar_vector_stall_time`** near `aiv_time` means the scalar unit spent the block waiting on
   the vector queue. That is normal for a queue-fed kernel, not a finding.
 - **`aiv_icache_miss_rate`** above a few percent points at instruction footprint, usually an
