@@ -60,7 +60,7 @@ stage of a healthy run takes about 30 s; 844 s with the device idle is a held di
 
 **`pkill -f "msprof op"` does not reap them.** `msopprof` re-execs, and the survivor's argv is the
 plain binary path, so the pattern you launched with no longer matches. Enumerate with
-`pgrep -f msopprof` and kill by pid.
+`pgrep -x msopprof` and kill by pid (match the executable name, not the command line).
 
 **Verify with the HBM figure, not with the absence of the pattern.** The pattern disappears while
 the memory is still held.

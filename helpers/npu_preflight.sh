@@ -43,10 +43,15 @@ fi
 
 # ------------------------------------------------- 2. stale profilers owned by me
 # `pkill -f "msprof op"` does NOT reap these: msopprof re-execs and the survivor's argv is the
-# plain binary path. Match the binary name, and kill by pid.
+# plain binary path. Match the executable name instead, and kill by pid.
+#
+# Match on the process name (pgrep -x), never on the command line (pgrep -f): both profilers are
+# ELF binaries, so their name is exact and stable, while -f also matches any shell whose argv
+# merely contains the string -- including this script, whose own install path is
+# ascend-msprof-report-skill.
 find_stale() {
     local pid out=()
-    for pid in $(pgrep -u "$(id -u)" -f 'msopprof|msprof' 2>/dev/null); do
+    for pid in $(pgrep -u "$(id -u)" -x 'msopprof|msprof' 2>/dev/null); do
         [[ "$pid" == "$$" || "$pid" == "$PPID" ]] && continue
         out+=("$pid")
     done
